@@ -111,6 +111,19 @@ def power(b, e):
             raise Exception('trying to get root of even degree from a negative number.')
         
         return power(b, c) * newton_root( power(b, f[0]), f[1] )
+
+
+
+
+
+
+
+
+
+
+
+
+
         
 if __name__ == '__main__':
     import timeit
