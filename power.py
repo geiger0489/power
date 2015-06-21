@@ -1,23 +1,32 @@
 ﻿PRECISION = 1e-12 #decimal places
 
 def factorize(a):
-	if not a: return [0]
-	m = []
-	a = abs(a)
-	i = 2;
-	while not a == 1:
-		if a % i:
-			i += 1
-		else:
-			m.append(i)
-			a = a / i
-	return m
+    '''
+    Factorizes a given number returning a list of coefficients.
+    e.g factorize(10) = [1, 2, 5], factorize(-10) = [-1, 2, 5].
+    Input parameter should be an integer number.
+    '''
+    
+    if a % 1:
+        raise TypeError('Trying to factorize non integer number.')
+    if not a:
+        return [0]
+    m = [a/abs(a),]
+    a = abs(a)
+    i = 2;
+    while not a == 1:
+        if a % i:
+            i += 1
+        else:
+            m.append(i)
+            a = a / i
+    return m
 
 def simplify(m):
     '''
     Takes 0<m<1 (e.g. 0,6527)
-    and returns a tuple containig two numbers (a, b)
-    so that a/b = m, and a/b is the simplified ratio
+    and returns a tuple containig two numbers (a, b),
+    so that a/b = m, and a/b is the simplified ratio.
     '''
     
     # decimal places, denominator, numerator
@@ -61,10 +70,21 @@ def simplify(m):
 def newton_root(b, e):
     '''
     Implements Newton's method to 
-    calculate approx value of e-th root from b
-    e must be ceil and e != 0, 
+    calculate approximate value of e-th root of b.
+    For uneven e, b can have any Real value.
+    In case of even e, b should be non negative. 
+    Exponent e should always be > 0.
     '''
     
+    if b == 0:
+        return 0
+        
+    if b < 0:
+        if e % 2:
+            return -1 * newton_root(-b, e)
+        else:
+            raise Exception('trying to evaluate root of even degree from a negative number.')
+        
     r = 1
     delta = 1
     while abs(delta) > PRECISION:
@@ -74,18 +94,18 @@ def newton_root(b, e):
 
 def power(b, e):
     '''
-    Function returns b^e where 
+    Function returning b^e where 
     b - base and e - exponent
-    works for both Real and Complex b and e.
-    e.g. both b^e and (a+bj)^(c+dj)
+    works for Real b and e.
+    Expected to work with Complex b and e in future.
     '''
     
-    # Exceptions
+    # exceptions
     if b == e == 0:
-        raise Exception('0^0 is not defined.')
+        raise ValueError('0^0 is not defined.')
         
     if b == 0 and e < 0:
-        raise Exception('1/0 is not defined.')
+        raise ValueError('1/0 is not defined.')
     
     if b == 0 and e > 0:
         return 0
@@ -93,120 +113,80 @@ def power(b, e):
     if e < 0:
         return 1 / power(b, -e)
     
-    #For ceil e
-    if not e % 1:
+    if not e % 1: #for integer e
         n = 1.0
         for i in range(e):
             n = n * b
         return n
         
-    #For fractional e
-    else:
+    else: #for fractional e
         f = e % 1 #fractional part
-        c = round(e - f) #ceil part
-        
+        c = round(e - f) #integer part
         f = simplify(f)
-        
-        if b < 0 and not f[1] % 2:
-            raise Exception('trying to get root of even degree from a negative number.')
-        
         return power(b, c) * newton_root( power(b, f[0]), f[1] )
-
-
-
-
-
-
-
-
-
-
-
-
+        # e.g. 2^0,5 = 2^(5/10) = 2^(5/5*2) = 2^(1/2) = (2^1)*sqrt(2)
 
         
 if __name__ == '__main__':
-    import timeit
-
-    # automated tests
-    print('Running automate tests...\n')
-
-    # factorization
-    factorization_test_ok = True
-    for i in range(1000):
+    import unittest
+    
+    #=========================================================================
+    class FactorizationTestCase(unittest.TestCase):
         
-        n = 1
-        for j in factorize(i):
-            n = n * j
+        def test_factorize_for_numbers_from_minus_1000_to_1000(self):
+            for i in range(-1000, 1000):
+                f = factorize(i)
+                n = 1
+                for j in f:
+                    n = n * j
+                self.assertEqual(n, i)
+    
+    #=========================================================================
+    class SimplificationTestCase(unittest.TestCase):
+        
+        def test_simplify_for_numbers_from_0_001_to_1(self):
+            total = 1000
+            for i in range(total):
+                _in = i / total
+                _out = simplify(i / total)
+                _out = _out[0] / _out[1]
+                self.assertEqual(_in, _out)
+    
+    #=========================================================================    
+    class NewtonRootTestCase(unittest.TestCase):
+    
+        def test_7th_newton_root_for_numbers_from_minus_0_to_1000(self):
+            for i in range(1000):
+                r = newton_root(i, 7)
+                self.assertTrue(abs(r - pow(i, 1/7)) <= PRECISION)
+    
+    #=========================================================================
+    class PowerTestCase(unittest.TestCase):
+    
+        def test_power_for_b_in_0_to_1_and_e_in_0_to_1(self):
+            for i in range(1, 100):
+                b = e = i / 100
+                p = power(b, e)
+                self.assertTrue(abs(p - pow(b, e)) <= PRECISION)
+                
+        def test_power_for_b_in_1_to_1000_and_e_equals_to_3(self):
+            for i in range(1, 1000):
+                p = power(i, 5)
+                self.assertTrue(abs(p - pow(i, 5)) < PRECISION)
+        
+        def test_power_for_negative_b_and_uneven_positive_e(self):
+            self.assertEqual(power(-3, 5), pow(-3, 5))
+                
+        def test_power_for_negative_b_and_uneven_negative_e(self):
+            self.assertEqual(power(-3, -5), pow(-3, -5))
+
+        def test_power_for_negative_b_and_even_positive_e(self):
+            self.assertEqual(power(-3, 4), pow(-3, 4))
+                
+        def test_power_for_negative_b_and_even_negative_e(self):
+            self.assertEqual(power(-3, -4), pow(-3, -4))
             
-        if not i == n:
-            factorization_test_ok = False
-            
-    print('factorization_test_ok =', factorization_test_ok)
-    print('Repeat 10000 times =', timeit.timeit('factorize(1000)',
-                                 setup="from __main__ import factorize",
-                                 number=10000), 'sec.\n')
+    #=========================================================================            
     
-    # simplification
-    simplification_test_ok = True
-    for i in range(1000):
- 
-        num = i / 1000
-        s = simplify(num)
-        
-        if not s[0]/s[1] == num:
-            simplification_test_ok = False
-    
-    print('simplification_test_ok =', simplification_test_ok)
-    print('Repeat 10000 times =', timeit.timeit('simplify(0.2647)',
-                                 setup="from __main__ import simplify",
-                                 number=10000), 'sec.\n')
-
-    # newton_root
-    from math import pow
-    
-    newton_root_test_ok = True
-    for i in range(1, 1000):
-
-        r = newton_root(i, 7)
-        
-        if abs(r - pow(i, 1/7)) > PRECISION:
-            newton_root_test_ok = False
-    
-    print('newton_root_test_ok =', newton_root_test_ok)
-    print('Repeat 10000 times =', timeit.timeit('newton_root(2537, 18)',
-                                 setup="from __main__ import newton_root",
-                                 number=10000), 'sec.\n')
-    
-    # power
-    power_test_ok = True
-    for i in range(1, 100): # 0<b<1, 0<e<1
-        base = expo = i / 100
-        p = power(base, expo)
-        
-        if abs(p - pow(base, expo)) > PRECISION:
-            power_test_ok = False
-    
-    
-    for i in range(1, 1000): # 1<=b<10000, e=3
-        
-        p = power(i, 5)
-        
-        if abs(p - pow(i, 5)) > PRECISION:
-            power_test_ok = False
-            
-    if not power(-3, 5) == pow(-3, 5):
-        power_test_ok = False
-        
-    if not power(-3, -5) == pow(-3, -5):
-        power_test_ok = False
-   
-    print('power_test_ok =', power_test_ok)
-    print(power(12.02, 7.03))
-    
-    '''
-    print('Repeat 1000 times =', timeit.timeit('power(12.678, 7.985)',
-                                  setup="from __main__ import power",
-                                  number=1), 'sec.\n')'''
-    
-    input('\nPress any key to exit...')
+    #start testing
+    unittest.main()
