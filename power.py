@@ -1,5 +1,70 @@
 ﻿PRECISION = 1e-12 #decimal places
 
+def taylor_sin(x):
+    '''
+    Calculates sin(x), where sin(x) is represented
+    as taylor's series (n-th sum of terms).
+    The higher n you take the more precise result you get.
+    '''
+
+    r, i = 0, 0
+    delta = x #start value
+    
+    while abs(delta) > PRECISION:
+        delta = power(-1, i) / factorial(2*i+1) * power(x, 2*i+1)  
+        r += delta
+        i += 1
+    return r
+
+def taylor_cos(x):
+    '''
+    Calculates cos(x), where cos(x) is represented
+    as taylor's series (n-th sum of terms).
+    The higher n you take the more precise result you get.
+    '''
+
+    r, i = 0, 0
+    delta = x #start value
+    
+    while abs(delta) > PRECISION:
+        delta = power(-1, i) / factorial(2*i) * power(x, 2*i)  
+        r += delta
+        i += 1
+    return r
+
+def taylor_asin(x):
+    '''
+    Calculates arcsin(x), where arcsin(x) is represented
+    as taylor's series (n-th sum of terms).
+    The higher n you take the more precise result you get.
+    '''
+    
+    if abs(x) >= 1:
+        raise ValueError('arcsin(x) is defined for |x| < 1.')
+    
+    r, i = 0, 0
+    delta = x #start value
+    
+    while abs(delta) > PRECISION: # maximum precision possible without overflow
+        #first two numbers are very big
+        #so big, that I get overflow error
+        #that's why I use int arithmetics
+        delta = factorial(2*i) // power(factorial(i), 2) \
+                / (power(4, i) * (2*i+1)) * power(x, 2*i+1) 
+        r += delta                                          
+        i += 1
+    return r
+    
+def factorial(n):
+    '''
+    Calculates n! = 1*2*3*4...*n
+    '''
+    
+    f = 1
+    for i in range(n):
+        f = f * (i + 1)
+    return f
+
 def factorize(a):
     '''
     Factorizes a given number returning a list of coefficients.
@@ -112,9 +177,9 @@ def power(b, e):
         
     if e < 0:
         return 1 / power(b, -e)
-    
+        
     if not e % 1: #for integer e
-        n = 1.0
+        n = 1
         for i in range(e):
             n = n * b
         return n
@@ -123,10 +188,21 @@ def power(b, e):
         f = e % 1 #fractional part
         c = round(e - f) #integer part
         f = simplify(f)
-        return power(b, c) * newton_root( power(b, f[0]), f[1] )
         # e.g. 2^0,5 = 2^(5/10) = 2^(5/5*2) = 2^(1/2) = (2^1)*sqrt(2)
+        return power(b, c) * newton_root( power(b, f[0]), f[1] )
 
-        
+def complex_power(b, e):
+    '''
+    Function returning b^e where 
+    b and/or e are complex (x+yj).
+    (a+bj)^n = r^n * (cos(n*phi) + jsin(n*phi))
+    where phi = Arg(a+bj) = arccos(b/sqrt(a^2 + b^2))
+    '''
+    '''
+    c = (b.real, b.imag)
+    r = newton_root(c[0]*c[0] + c[1]*c[1], 2)
+    return c, r'''
+ 
 if __name__ == '__main__':
     import unittest
     
@@ -159,7 +235,46 @@ if __name__ == '__main__':
             for i in range(1000):
                 r = newton_root(i, 7)
                 self.assertTrue(abs(r - pow(i, 1/7)) <= PRECISION)
+
+    #=========================================================================    
+    class FactorialTestCase(unittest.TestCase):
     
+        def test_factorial_for_i_in_range_0_to_100(self):
+            from math import factorial as fact
+            for i in range(100):
+                self.assertEqual(factorial(i), fact(i))
+
+    #=========================================================================    
+    class TaylorSinTestCase(unittest.TestCase):
+    
+        def test_taylor_sin_for_i_in_range_0_to_2pi(self):
+            from math import sin
+            for i in range(1, 1000):
+                n = 6.28 / i
+                self.assertTrue(abs(taylor_sin(n) - sin(n)) <= PRECISION)
+    
+    #=========================================================================    
+    class TaylorCosTestCase(unittest.TestCase):
+    
+        def test_taylor_cos_for_i_in_range_0_to_2pi(self):
+            from math import cos
+            for i in range(1, 1000):
+                n = 6.28 / i
+                self.assertTrue(abs(taylor_cos(n) - cos(n)) <= PRECISION)
+
+    #=========================================================================    
+    class TaylorAsinTestCase(unittest.TestCase):
+    
+        def test_taylor_asin_for_i_in_range_min_1_to_1(self):
+            from math import asin
+            for i in range(-9999, -1):
+                n = 1 / i
+                self.assertTrue(abs(taylor_asin(n) - asin(n)) <= PRECISION)
+            for i in range(2, 9999):
+                n = 1 / i
+                self.assertTrue(abs(taylor_asin(n) - asin(n)) <= PRECISION)
+            self.assertTrue(taylor_asin(0) == 0)
+                
     #=========================================================================
     class PowerTestCase(unittest.TestCase):
     
